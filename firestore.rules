@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Parking tickets — server-side only via Admin SDK
+    match /parking_tickets/{ticketId} {
+      allow read, write: if false;
+    }
+
+    // Parking config — server-side only via Admin SDK
+    match /parking_config/{locationId} {
+      allow read, write: if false;
+    }
+
+    // Parking admins — server-side only via Admin SDK
+    match /parking_admins/{uid} {
+      allow read, write: if false;
+    }
+
+    // Parking stats — server-side only via Admin SDK
+    match /parking_stats/{locationId}/daily/{date} {
+      allow read, write: if false;
+    }
+  }
+}
