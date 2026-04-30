@@ -28,6 +28,11 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
 
+  const handleLogout = async () => {
+    await fetch("/api/auth/session", { method: "DELETE" });
+    window.location.href = "/auth/login";
+  };
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
@@ -70,7 +75,7 @@ export default function DashboardLayout({
 
         {/* Footer */}
         <div className="border-t border-[hsl(var(--border))] px-3 py-4">
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[hsl(var(--sidebar-foreground))] hover:bg-[hsl(var(--sidebar-hover))] hover:text-[hsl(var(--foreground))] transition-colors">
+          <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[hsl(var(--sidebar-foreground))] hover:bg-[hsl(var(--sidebar-hover))] hover:text-[hsl(var(--foreground))] transition-colors">
             <LogOut className="h-4 w-4" />
             Sair
           </button>
