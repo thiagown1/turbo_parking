@@ -8,117 +8,109 @@ import {
   Camera,
   Activity,
 } from "lucide-react";
-import { cn, formatDate, getStatusBadgeClass, getStatusLabel } from "@/lib/utils";
-import type { ParkingTicket } from "@/interfaces/parking-ticket";
+import { cn, formatDate } from "@/lib/utils";
+import type { ParkingSession } from "@/interfaces/parking-session";
 
 // ─── Mock data (replaced by Firebase later) ───
 
 const statsData = [
   {
-    label: "Veículos Hoje",
+    label: "Veículos no Pátio",
     value: "42",
     icon: Car,
     change: "+12%",
     changeUp: true,
   },
   {
-    label: "Validados",
-    value: "38",
+    label: "Validados (EV)",
+    value: "18",
     icon: CheckCircle2,
     change: "+8%",
     changeUp: true,
   },
   {
     label: "Pendentes",
-    value: "4",
+    value: "24",
     icon: Clock,
     change: "-2",
     changeUp: false,
   },
   {
-    label: "Receita Mensal",
-    value: "R$ 2.480",
-    icon: TrendingUp,
+    label: "Visitas LPR",
+    value: "156",
+    icon: Camera,
     change: "+15%",
     changeUp: true,
   },
 ];
 
 const chartData = [
-  { day: "Seg", count: 18 },
-  { day: "Ter", count: 24 },
-  { day: "Qua", count: 22 },
-  { day: "Qui", count: 28 },
-  { day: "Sex", count: 32 },
-  { day: "Sáb", count: 26 },
-  { day: "Dom", count: 14 },
+  { day: "Seg", count: 120 },
+  { day: "Ter", count: 145 },
+  { day: "Qua", count: 130 },
+  { day: "Qui", count: 156 },
+  { day: "Sex", count: 198 },
+  { day: "Sáb", count: 210 },
+  { day: "Dom", count: 180 },
 ];
 
-const recentTickets: ParkingTicket[] = [
+const recentSessions: ParkingSession[] = [
   {
     id: "1",
-    ticketCode: "TK-2024-0892",
-    locationId: "metropole_shopping",
-    entryTimestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    status: "validated",
-    validatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-    validatedBy: "system",
-    totalRechargeMinutes: 25,
-    totalParkingMinutesGranted: 25,
-    rechargeHistory: [],
-    createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    plate: "SGT7D71",
+    plate_normalized: "SGT7D71",
+    vehicle_type: "visitante",
+    is_authorized: false,
+    gate_opened_by: "auto_lpr",
+    recognition_confidence: 98.5,
+    entry_time: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    status: "active",
+    payment_status: "paid",
+    ev_recharge_validated: true,
+    ev_total_recharge_minutes: 25,
+    ev_total_parking_minutes_granted: 25,
+    created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
   },
   {
     id: "2",
-    ticketCode: "TK-2024-0891",
-    locationId: "metropole_shopping",
-    entryTimestamp: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-    status: "pending",
-    totalRechargeMinutes: 0,
-    totalParkingMinutesGranted: 0,
-    rechargeHistory: [],
-    createdAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+    plate: "ABC1234",
+    plate_normalized: "ABC1234",
+    vehicle_type: "morador",
+    is_authorized: true,
+    gate_opened_by: "auto_lpr",
+    recognition_confidence: 99.1,
+    entry_time: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+    status: "active",
+    payment_status: "free",
+    created_at: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
   },
   {
     id: "3",
-    ticketCode: "TK-2024-0890",
-    locationId: "metropole_shopping",
-    entryTimestamp: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
-    status: "expired",
-    totalRechargeMinutes: 5,
-    totalParkingMinutesGranted: 5,
-    rechargeHistory: [],
-    createdAt: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    plate: "XYZ9876",
+    plate_normalized: "XYZ9876",
+    vehicle_type: "visitante",
+    is_authorized: false,
+    gate_opened_by: "auto_lpr",
+    recognition_confidence: 96.2,
+    entry_time: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
+    status: "completed",
+    payment_status: "pending",
+    duration_minutes: 180,
+    amount_charged: 15.0,
+    created_at: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
   },
   {
     id: "4",
-    ticketCode: "TK-2024-0889",
-    locationId: "metropole_shopping",
-    entryTimestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    status: "validated",
-    validatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    validatedBy: "operator",
-    validatedByUserId: "admin-001",
-    totalRechargeMinutes: 20,
-    totalParkingMinutesGranted: 20,
-    rechargeHistory: [],
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "5",
-    ticketCode: "TK-2024-0888",
-    locationId: "metropole_shopping",
-    entryTimestamp: new Date(Date.now() - 240 * 60 * 1000).toISOString(),
-    status: "requires_payment",
-    totalRechargeMinutes: 15,
-    totalParkingMinutesGranted: 15,
-    rechargeHistory: [],
-    createdAt: new Date(Date.now() - 240 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
+    plate: "DEF5678",
+    plate_normalized: "DEF5678",
+    vehicle_type: "visitante",
+    is_authorized: false,
+    gate_opened_by: "auto_lpr",
+    recognition_confidence: 95.0,
+    entry_time: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    status: "active",
+    payment_status: "pending",
+    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -165,7 +157,7 @@ export default function DashboardOverview() {
         <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Camera className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-            <h2 className="text-sm font-semibold">Câmera de Entrada</h2>
+            <h2 className="text-sm font-semibold">Câmera LPR de Entrada</h2>
             <span className="ml-auto flex items-center gap-1.5 text-xs text-[hsl(var(--status-success))]">
               <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--status-success))] animate-pulse-dot" />
               Ao vivo
@@ -175,7 +167,7 @@ export default function DashboardOverview() {
             <div className="text-center">
               <Camera className="mx-auto h-8 w-8 text-[hsl(var(--muted-foreground))]" />
               <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">
-                Configure a URL da câmera nas configurações
+                Integração com câmera de reconhecimento pendente.
               </p>
             </div>
           </div>
@@ -185,7 +177,7 @@ export default function DashboardOverview() {
         <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Activity className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-            <h2 className="text-sm font-semibold">Validações (7 dias)</h2>
+            <h2 className="text-sm font-semibold">Leituras (7 dias)</h2>
           </div>
           <div className="flex h-48 items-end gap-2">
             {chartData.map((d) => (
@@ -217,7 +209,7 @@ export default function DashboardOverview() {
             href="/dashboard/tickets"
             className="text-xs text-[hsl(var(--primary))] hover:underline"
           >
-            Ver todos →
+            Ver todas →
           </a>
         </div>
         <div className="overflow-x-auto">
@@ -225,54 +217,49 @@ export default function DashboardOverview() {
             <thead>
               <tr className="border-b border-[hsl(var(--border))]">
                 <th className="px-5 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                  Ticket
+                  Placa
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                  Status
+                  Pagamento
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]">
                   Entrada
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                  Recarga
+                  Tipo
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                  Validado por
+                  Confiança LPR
                 </th>
               </tr>
             </thead>
             <tbody>
-              {recentTickets.map((ticket) => (
+              {recentSessions.map((session) => (
                 <tr
-                  key={ticket.id}
+                  key={session.id}
                   className="border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--secondary)/0.5)] transition-colors"
                 >
                   <td className="px-5 py-3.5">
-                    <code className="font-mono text-xs">
-                      {ticket.ticketCode}
+                    <code className="font-mono text-sm font-semibold">
+                      {session.plate}
                     </code>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className={cn("badge", getStatusBadgeClass(ticket.status))}>
-                      {getStatusLabel(ticket.status)}
+                    <span className={cn("badge", 
+                      session.payment_status === "paid" ? "badge-success" : 
+                      session.payment_status === "free" ? "badge-info" : "badge-warning"
+                    )}>
+                      {session.payment_status === "paid" ? "Pago" : session.payment_status === "free" ? "Isento" : "Pendente"}
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
-                    {formatDate(ticket.entryTimestamp)}
+                    {formatDate(session.entry_time)}
                   </td>
                   <td className="px-5 py-3.5">
-                    {ticket.totalRechargeMinutes > 0 ? (
-                      <span>{ticket.totalRechargeMinutes} min</span>
-                    ) : (
-                      <span className="text-[hsl(var(--muted-foreground))]">—</span>
-                    )}
+                    <span className="capitalize text-[hsl(var(--muted-foreground))]">{session.vehicle_type}</span>
                   </td>
                   <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
-                    {ticket.validatedBy === "system"
-                      ? "Sistema"
-                      : ticket.validatedBy === "operator"
-                      ? "Operador"
-                      : "—"}
+                    {session.recognition_confidence.toFixed(1)}%
                   </td>
                 </tr>
               ))}

@@ -34,9 +34,14 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Firebase credentials (NEVER commit)
+firebase_credentials.json
+*-credentials.json
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+*.json

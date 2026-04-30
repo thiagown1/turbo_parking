@@ -27,6 +27,9 @@ export interface ParkingConfig {
   cameraFeedUrl?: string;
   cameraFeedType?: "iframe" | "mjpeg" | "hls" | "image";
 
+  // Testing / Overrides
+  testModeAlwaysOpenGate?: boolean;
+
   address?: string;
   createdAt: string;
   updatedAt: string;

@@ -1,0 +1,46 @@
+{
+  "api": {
+    "token": "401e91cdab255ecc2636b36b5c08acf29a5c2de0",
+    "base_url": "https://api.platerecognizer.com/v1",
+    "endpoint": "plate-reader",
+    "timeout": 30,
+    "max_retries": 3,
+    "retry_delay": 1
+  },
+  "processing": {
+    "batch_size": 10,
+    "min_confidence": 0.95,
+    "supported_formats": ["jpg", "jpeg", "png"],
+    "max_file_size": 10485760,
+    "parallel_processing": true,
+    "max_workers": 4
+  },
+  "paths": {
+    "images": "images",
+    "processed": "processed",
+    "dataset": "dataset",
+    "logs": "logs",
+    "results": "results"
+  },
+  "dataset": {
+    "format": "coco",
+    "include_raw_response": true,
+    "auto_backup": true,
+    "backup_interval": 100,
+    "split_ratio": {
+      "train": 0.8,
+      "val": 0.1,
+      "test": 0.1
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "max_file_size": 10485760,
+    "backup_count": 5
+  },
+  "monitoring": {
+    "watch_folder": true,
+    "check_interval": 5,
+    "auto_process": true
+  }
+} 

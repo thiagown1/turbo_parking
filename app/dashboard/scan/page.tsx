@@ -1,219 +1,291 @@
 "use client";
 
 import { useState } from "react";
-import { QrCode, Keyboard, CheckCircle2, AlertCircle, Search } from "lucide-react";
-import { cn, getStatusBadgeClass, getStatusLabel, formatDate } from "@/lib/utils";
-import type { ParkingTicket } from "@/interfaces/parking-ticket";
+import { Car, CheckCircle2, AlertCircle, Search, QrCode } from "lucide-react";
+import { Scanner } from "@yudiel/react-qr-scanner";
+import { cn, formatDate } from "@/lib/utils";
+import type { ParkingSession } from "@/interfaces/parking-session";
 
-type ScanMode = "camera" | "manual";
 type ScanState = "idle" | "scanning" | "found" | "validated" | "error";
+type TabType = "qr" | "manual";
 
-// Mock: simulate finding a ticket
-const mockTicket: ParkingTicket = {
-  id: "scan-1",
-  ticketCode: "TK-2024-0892",
-  locationId: "metropole_shopping",
-  entryTimestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-  status: "pending",
-  totalRechargeMinutes: 20,
-  totalParkingMinutesGranted: 20,
-  rechargeHistory: [
-    {
-      transactionId: "tx-001",
-      stationId: "metropole-01",
-      userId: "user-001",
-      rechargeDurationMinutes: 20,
-      parkingMinutesGranted: 20,
-      accumulatedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-    },
-  ],
-  createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-  updatedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-};
 
-export default function ScanPage() {
-  const [mode, setMode] = useState<ScanMode>("manual");
+
+export default function SearchValidationPage() {
+  const [activeTab, setActiveTab] = useState<TabType>("qr");
   const [scanState, setScanState] = useState<ScanState>("idle");
-  const [manualCode, setManualCode] = useState("");
-  const [foundTicket, setFoundTicket] = useState<ParkingTicket | null>(null);
+  const [identifierInput, setIdentifierInput] = useState("");
+  const [foundSession, setFoundSession] = useState<ParkingSession | null>(null);
 
-  const handleManualSearch = () => {
-    if (!manualCode.trim()) return;
+  const handleSearch = async (identifier: string) => {
+    if (!identifier.trim()) return;
     setScanState("scanning");
 
-    // Simulate API call
-    setTimeout(() => {
-      setFoundTicket(mockTicket);
-      setScanState("found");
-    }, 800);
+    try {
+      const res = await fetch(`/api/sessions/${encodeURIComponent(identifier)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFoundSession(data.session);
+        setScanState("found");
+      } else {
+        setScanState("error");
+      }
+    } catch (e) {
+      console.error(e);
+      setScanState("error");
+    }
   };
 
-  const handleValidate = () => {
-    if (!foundTicket) return;
+  const handleValidate = async () => {
+    if (!foundSession) return;
     setScanState("scanning");
 
-    setTimeout(() => {
-      setFoundTicket({ ...foundTicket, status: "validated", validatedAt: new Date().toISOString(), validatedBy: "operator" });
-      setScanState("validated");
-    }, 600);
+    try {
+      const res = await fetch("/api/sessions/operator-validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: foundSession.plate_normalized || foundSession.ticket_id,
+          locationId: "metropole_shopping",
+          notes: "Validated via scan tool",
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setFoundSession(data.session);
+        setScanState("validated");
+      } else {
+        alert("Falha na validação.");
+        setScanState("found");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao conectar.");
+      setScanState("found");
+    }
   };
 
   const handleReset = () => {
     setScanState("idle");
-    setFoundTicket(null);
-    setManualCode("");
+    setFoundSession(null);
+    setIdentifierInput("");
   };
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      {/* Mode Toggle */}
-      <div className="flex rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-1">
+      {/* Tabs */}
+      <div className="flex w-full overflow-hidden rounded-xl bg-[hsl(var(--secondary))] p-1">
         <button
-          onClick={() => { setMode("camera"); handleReset(); }}
+          onClick={() => { setActiveTab("qr"); handleReset(); }}
           className={cn(
-            "flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors",
-            mode === "camera"
-              ? "bg-[hsl(var(--secondary))] text-[hsl(var(--foreground))]"
+            "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all",
+            activeTab === "qr"
+              ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm"
               : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           )}
         >
           <QrCode className="h-4 w-4" />
-          Câmera
+          QR Code (Guest)
         </button>
         <button
-          onClick={() => { setMode("manual"); handleReset(); }}
+          onClick={() => { setActiveTab("manual"); handleReset(); }}
           className={cn(
-            "flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors",
-            mode === "manual"
-              ? "bg-[hsl(var(--secondary))] text-[hsl(var(--foreground))]"
+            "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all",
+            activeTab === "manual"
+              ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm"
               : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           )}
         >
-          <Keyboard className="h-4 w-4" />
-          Código Manual
+          <Car className="h-4 w-4" />
+          Busca de Placa
         </button>
       </div>
 
-      {/* Scanner Area */}
-      <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+      {/* Main Area */}
+      <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-sm">
         {scanState === "idle" || scanState === "scanning" ? (
           <>
-            {mode === "camera" ? (
-              <div className="space-y-4">
-                <div className="flex aspect-square max-h-80 items-center justify-center rounded-lg bg-[hsl(var(--secondary))]">
-                  <div className="text-center">
-                    <QrCode className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
-                    <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]">
-                      Aponte a câmera para o QR code do ticket
-                    </p>
-                    <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-                      O scanner de câmera será integrado com html5-qrcode
-                    </p>
-                  </div>
+            <div className="mb-6 flex flex-col items-center justify-center text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[hsl(var(--primary)/0.1)]">
+                {activeTab === "qr" ? (
+                  <QrCode className="h-8 w-8 text-[hsl(var(--primary))]" />
+                ) : (
+                  <Car className="h-8 w-8 text-[hsl(var(--primary))]" />
+                )}
+              </div>
+              <h2 className="text-xl font-semibold tracking-tight">
+                {activeTab === "qr" ? "Escanear QR Code" : "Pesquisa de Placa (LPR)"}
+              </h2>
+              <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
+                {activeTab === "qr"
+                  ? "Posicione o QR Code do visitante na frente da câmera."
+                  : "Use esta ferramenta para validação manual ou contingência."}
+              </p>
+            </div>
+
+            {activeTab === "qr" ? (
+              <div className="flex flex-col items-center space-y-4">
+                <div className="w-full max-w-sm overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-black">
+                  <Scanner
+                    onScan={(result) => {
+                      if (result && result.length > 0) {
+                        handleSearch(result[0].rawValue);
+                      }
+                    }}
+                    components={{
+                      finder: true,
+                    }}
+                    styles={{
+                      container: { width: "100%", paddingTop: "100%" },
+                    }}
+                  />
                 </div>
+                {scanState === "scanning" && (
+                  <p className="animate-pulse text-sm font-medium text-[hsl(var(--primary))]">
+                    Validando ticket...
+                  </p>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
-                <label className="block text-sm font-medium">
-                  Código do Ticket
-                </label>
+                <label className="block text-sm font-medium">Placa do Veículo</label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
                     <input
                       type="text"
-                      value={manualCode}
-                      onChange={(e) => setManualCode(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleManualSearch()}
-                      placeholder="Ex: TK-2024-0892"
-                      className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] py-2.5 pl-10 pr-4 text-sm font-mono placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+                      value={identifierInput}
+                      onChange={(e) => setIdentifierInput(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch(identifierInput)}
+                      placeholder="Ex: ABC1234 ou ABC1D23"
+                      className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] py-3 pl-10 pr-4 text-base font-mono uppercase tracking-widest placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
                     />
                   </div>
                   <button
-                    onClick={handleManualSearch}
-                    disabled={!manualCode.trim() || scanState === "scanning"}
-                    className="rounded-lg bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    onClick={() => handleSearch(identifierInput)}
+                    disabled={!identifierInput.trim() || scanState === "scanning"}
+                    className="rounded-lg bg-[hsl(var(--primary))] px-6 py-3 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
                   >
-                    {scanState === "scanning" ? "Buscando..." : "Buscar"}
+                    {scanState === "scanning" ? "Buscando..." : "Buscar Placa"}
                   </button>
                 </div>
               </div>
             )}
           </>
-        ) : scanState === "found" && foundTicket ? (
+        ) : scanState === "found" && foundSession ? (
           <div className="space-y-5 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Ticket Encontrado</h3>
-              <span className={cn("badge", getStatusBadgeClass(foundTicket.status))}>
-                {getStatusLabel(foundTicket.status)}
+            <div className="flex items-center justify-between rounded-lg bg-[hsl(var(--secondary)/0.5)] p-4">
+              <div>
+                <p className="mb-1 text-xs text-[hsl(var(--muted-foreground))]">
+                  {activeTab === "qr" ? "Ticket Encontrado" : "Placa Encontrada"}
+                </p>
+                <h3 className="font-mono text-2xl font-bold tracking-widest">
+                  {activeTab === "qr" ? foundSession.ticket_id || "GUEST" : foundSession.plate}
+                </h3>
+              </div>
+              <span
+                className={cn(
+                  "badge",
+                  foundSession.payment_status === "paid"
+                    ? "badge-success"
+                    : foundSession.payment_status === "free"
+                    ? "badge-info"
+                    : "badge-warning"
+                )}
+              >
+                {foundSession.payment_status === "paid"
+                  ? "Pago"
+                  : foundSession.payment_status === "free"
+                  ? "Isento"
+                  : "Pendente"}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-[hsl(var(--muted-foreground))]">Código</p>
-                <p className="font-mono text-sm font-medium">{foundTicket.ticketCode}</p>
-              </div>
+            <div className="grid grid-cols-2 gap-4 px-2">
               <div>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">Entrada</p>
-                <p className="text-sm">{formatDate(foundTicket.entryTimestamp)}</p>
+                <p className="text-sm font-medium">{formatDate(foundSession.entry_time)}</p>
+              </div>
+              {foundSession.plate && activeTab === "qr" && (
+                <div>
+                  <p className="text-xs text-[hsl(var(--muted-foreground))]">Placa (LPR)</p>
+                  <p className="font-mono text-sm font-medium">{foundSession.plate}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-[hsl(var(--muted-foreground))]">Status da Sessão</p>
+                <p className="text-sm font-medium">
+                  {foundSession.status === "active" ? "No Pátio" : "Finalizada"}
+                </p>
               </div>
               <div>
-                <p className="text-xs text-[hsl(var(--muted-foreground))]">Tempo de Recarga</p>
-                <p className="text-sm">{foundTicket.totalRechargeMinutes} min</p>
-              </div>
-              <div>
-                <p className="text-xs text-[hsl(var(--muted-foreground))]">Min. Concedidos</p>
-                <p className="text-sm">{foundTicket.totalParkingMinutesGranted} min</p>
+                <p className="text-xs text-[hsl(var(--muted-foreground))]">Tipo</p>
+                <p className="text-sm font-medium capitalize">{foundSession.vehicle_type}</p>
               </div>
             </div>
 
-            {foundTicket.status === "pending" && (
-              <div className="flex gap-2 pt-2">
+            {foundSession.payment_status === "pending" && foundSession.status === "active" && (
+              <div className="flex gap-2 border-t border-[hsl(var(--border))] pt-4">
                 <button
                   onClick={handleValidate}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[hsl(var(--primary))] py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[hsl(var(--primary))] py-3 text-sm font-medium text-white shadow-sm transition-opacity hover:opacity-90"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  Validar Ticket
+                  Validar Sessão
                 </button>
                 <button
                   onClick={handleReset}
-                  className="rounded-lg border border-[hsl(var(--border))] px-4 py-2.5 text-sm hover:bg-[hsl(var(--secondary))] transition-colors"
+                  className="rounded-lg border border-[hsl(var(--border))] px-6 py-3 text-sm transition-colors hover:bg-[hsl(var(--secondary))]"
                 >
                   Cancelar
                 </button>
               </div>
             )}
+
+            {(foundSession.payment_status === "paid" || foundSession.payment_status === "free") && (
+              <div className="border-t border-[hsl(var(--border))] pt-4">
+                <button
+                  onClick={handleReset}
+                  className="w-full rounded-lg border border-[hsl(var(--border))] px-6 py-3 text-sm transition-colors hover:bg-[hsl(var(--secondary))]"
+                >
+                  Voltar para Pesquisa
+                </button>
+              </div>
+            )}
           </div>
-        ) : scanState === "validated" && foundTicket ? (
-          <div className="space-y-5 text-center animate-fade-in">
-            <CheckCircle2 className="mx-auto h-16 w-16 text-[hsl(var(--status-success))]" />
+        ) : scanState === "validated" && foundSession ? (
+          <div className="animate-fade-in space-y-5 py-4 text-center">
+            <CheckCircle2 className="mx-auto h-20 w-20 text-[hsl(var(--status-success))]" />
             <div>
-              <h3 className="text-lg font-semibold">Ticket Validado!</h3>
-              <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
-                {foundTicket.ticketCode} foi validado com sucesso
+              <h3 className="text-2xl font-bold tracking-tight">Sessão Validada!</h3>
+              <p className="mt-2 text-base text-[hsl(var(--muted-foreground))]">
+                A sessão para{" "}
+                <strong className="font-mono text-[hsl(var(--foreground))]">
+                  {activeTab === "qr" ? foundSession.ticket_id : foundSession.plate}
+                </strong>{" "}
+                foi validada com sucesso e a cancela será aberta na saída.
               </p>
             </div>
             <button
               onClick={handleReset}
-              className="rounded-lg bg-[hsl(var(--primary))] px-6 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+              className="mt-4 rounded-lg bg-[hsl(var(--primary))] px-8 py-3 text-sm font-medium text-white shadow-sm transition-opacity hover:opacity-90"
             >
-              Escanear Outro
+              Pesquisar Nova Sessão
             </button>
           </div>
         ) : scanState === "error" ? (
-          <div className="space-y-5 text-center animate-fade-in">
-            <AlertCircle className="mx-auto h-16 w-16 text-[hsl(var(--status-error))]" />
+          <div className="animate-fade-in space-y-5 py-4 text-center">
+            <AlertCircle className="mx-auto h-20 w-20 text-[hsl(var(--status-error))]" />
             <div>
-              <h3 className="text-lg font-semibold">Ticket Não Encontrado</h3>
-              <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
-                Verifique o código e tente novamente
+              <h3 className="text-2xl font-bold tracking-tight">Sessão Não Encontrada</h3>
+              <p className="mt-2 text-base text-[hsl(var(--muted-foreground))]">
+                Não há nenhum veículo ativo com essa identificação no pátio.
               </p>
             </div>
             <button
               onClick={handleReset}
-              className="rounded-lg border border-[hsl(var(--border))] px-6 py-2.5 text-sm hover:bg-[hsl(var(--secondary))] transition-colors"
+              className="mt-4 rounded-lg border border-[hsl(var(--border))] px-8 py-3 text-sm transition-colors hover:bg-[hsl(var(--secondary))]"
             >
               Tentar Novamente
             </button>

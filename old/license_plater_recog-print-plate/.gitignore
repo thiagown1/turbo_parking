@@ -1,0 +1,39 @@
+# Camera images folder
+camera_images/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp 
+
+/captures/*
+captures/*.jpg
+results/plate_camera_capture_20251109_193914.json
+results/*
+training_data/*
+
+# Mock test files
+mock_plate.txt
+results/plate_camera_capture_20250924_165513.json

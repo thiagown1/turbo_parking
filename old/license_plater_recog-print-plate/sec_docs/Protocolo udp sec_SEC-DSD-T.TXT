@@ -1,0 +1,381 @@
+/*================================================
+= PROTOCOLO UDP DO SECDS COM DISPLAY
+
+O quarto (4) byte dos comandos representa o tamanho dos dados a seguir
+
+=> Solicita status das conexoes TCP
+Comando recebido pelo sec:
+55 AA 00 00
+
+Enviado pelo sec:
+55 AA 00 01 B0
+Onde:
+Para o SecII temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 0 X
+                   0 - TCP desconectado
+                   1 - TCP Conectado
+
+Para o SecDS temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 X X
+                 0 - TCP 2 desconectado
+                 1 - TCP 2 conectado
+                   0 - TCP 1 desconectado
+                   1 - TCP 1 Conectado
+
+=> Solicita desconexao TCP
+Comando recebido pelo sec:
+55 AA 01 01 B0
+Onde:
+
+Para o SecII temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 0 X
+                   0 - Nao altera TCP
+                   1 - Desconecta TCP
+
+Para o SecDS temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 X X
+                 0 - Nao altera TCP 2
+                 1 - Desconecta TCP 2
+                   0 - Nao altera TCP 1
+                   1 - Desconecta TCP 1
+
+Enviado pelo sec:
+55 AA 01 01 B0
+Onde:
+
+Para o SecII temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 0 X
+                   0 - Nao alterou a conexao TCP
+                   1 - Desconectou TCP
+
+Para o SecDS temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 X X
+                 0 - Nao alterou a conexao TCP 2
+                 1 - Desconectou TCP 2
+                   0 - Nao alterou a conexao TCP 1
+                   1 - Desconectou TCP 1
+
+=> Solicita status de I/O
+Comando recebido pelo sec:
+55 AA 02 00
+
+Enviado pelo sec:
+55 AA 02 04(05 06) HD B0 B1 B2 (B3 B4)
+Onde:
+HD - Hardware utilizado
+     0x00 - SecII
+     0x01 - SecII-OP1
+     0x02 - SecII-OP2
+     0x10 - SecDS
+     0x11 - SecDS-OP1
+     0x12 - SecDS-OP2
+     0x20 - SecDSD
+     0x21 - SecDSD-OP1
+     0x22 - SecDSD-OP2
+
+Para o SecII temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     X X X X 0 0 X X
+     0 - Led 3 desligado
+     1 - Led 3 ligado
+       0 - Led 2 desligado
+       1 - Led 2 ligado
+         0 - Led 1 desligado
+         1 - Led 1 ligado
+           0 - Led 0 desligado
+           1 - Led 0 ligado
+                 0 - Rele nao temporizado
+                 1 - Rele temporizado
+                   0 - Rele desligado
+                   1 - Rele ligado
+
+B1 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 0 X
+                   0 - Led 4 desligado
+                   1 - Led 4 ligado
+
+B2 - 7 6 5 4 3 2 1 0
+     0 0 0 X X X X X
+           0 - Botao 4 fechado (Foto serial - Pino RA4)
+           1 - Botao 4 aberto (Foto serial - Pino RA4)
+             0 - Botao 3 fechado (Pino RB0)
+             1 - Botao 3 aberto (Pino RB0)
+               0 - Botao 2 fechado (Pino RB2)
+               1 - Botao 2 aberto (Pino RB1)
+                 0 - Botao 1 fechado (Pino RB2)
+                 1 - Botao 1 aberto (Pino RB2)
+                   0 - Botao 0 fechado (Pino RB3)
+                   1 - Botao 0 aberto (Pino RB3)
+
+B3 - Tempo restante do rele (0,1 a 25,5 segundos) caso temporizado
+
+Para o SecDS temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     X X X X X X X X
+     0 - Led 3 desligado
+     1 - Led 3 ligado
+       0 - Led 2 desligado
+       1 - Led 2 ligado
+         0 - Led 1 desligado
+         1 - Led 1 ligado
+           0 - Led 0 desligado
+           1 - Led 0 ligado
+             0 - Rele 2 nao temporizado
+             1 - Rele 2 temporizado
+               0 - Rele 2 desligado
+               1 - Rele 2 ligado
+                 0 - Rele 1 nao temporizado
+                 1 - Rele 1 temporizado
+                   0 - Rele 1 desligado
+                   1 - Rele 1 ligado
+
+B1 - 7 6 5 4 3 2 1 0
+     0 X X X X X X X
+       0 - Saida 5 desligada (Pino H3)
+       1 - Saida 5 ligada (Pino H3)
+         0 - Saida 4 desligada (Pino H2)
+         1 - Saida 4 ligada (Pino H2)
+           0 - Saida 3 desligada (Pino E1)
+           1 - Saida 3 ligada (Pino E1)
+             0 - Saida 2 desligada (Pino E0)
+             1 - Saida 2 ligada (Pino E0)
+               0 - Saida 1 desligada (Pino G5)
+               1 - Saida 1 ligada (Pino G5)
+                 0 - Saida 0 desligada (Pino G4)
+                 1 - Saida 0 ligada (Pino G4)
+                   0 - Led 4 desligado
+                   1 - Led 4 ligado
+
+B2 - 7 6 5 4 3 2 1 0
+     0 X X X X X X X
+       0 - Botao 6 fechado (Foto serial 2 - Pino RE2)
+       1 - Botao 6 aberto (Foto serial 2 - Pino RE2)
+         0 - Botao 5 fechado (Foto serial 1 - Pino RJ0)
+         1 - Botao 5 aberto (Foto serial 1 - Pino RJ0)
+           0 - Botao 4 fechado (Pino RB0)
+           1 - Botao 4 aberto (Pino RB0)
+             0 - Botao 3 fechado (Pino RB1)
+             1 - Botao 3 aberto (Pino RB1)
+               0 - Botao 2 fechado (Pino RB2)
+               1 - Botao 2 aberto (Pino RB2)
+                 0 - Botao 1 fechado (Pino RB3)
+                 1 - Botao 1 aberto (Pino RB3)
+                   0 - Botao 0 fechado (Pino RG6)
+                   1 - Botao 0 aberto (Pino RG6)
+
+B3 - Tempo restante do rele 1 (0,1 a 25,5 segundos) caso temporizado
+
+B4 - Tempo restante do rele 2 (0,1 a 25,5 segundos) caso temporizado
+
+=> Solicita alteracao de estados
+Comando recebido pelo sec:
+55 AA 03 04(05 06) B0 B1 B2 B3 (B4 B5)
+Onde:
+
+Para o SecII temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     X X 0 0 0 X X X
+     0 - Nao altera led 2
+     1 - Liga led 2
+       0 - Nao altera led 2
+       1 - Desliga led 2
+               0 0 0 - Nao altera rele
+               0 0 1 - Desliga rele
+               0 1 0 - Liga rele
+               1 1 0 - Liga rele temporizado
+
+B1 - 7 6 5 4 3 2 1 0
+     0 0 0 0 X X X X
+             0 - Nao altera led 4
+             1 - Liga led 4
+               0 - Nao altera led 4
+               1 - Desliga led 4
+                 0 - Nao altera led 3
+                 1 - Liga led 3
+                   0 - Nao altera led 3
+                   1 - Desliga led 3
+
+B2 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 0 0
+
+B3 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 0 0
+
+B4 - Tempo do rele (0,1 a 25,5 segundos) caso temporizado
+
+Para o SecDS temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     X X X X X X X X
+     0 - Nao altera led 2
+     1 - Liga led 2
+       0 - Nao altera led 2
+       1 - Desliga led 2
+         0 0 0 - Nao altera rele 2
+         0 0 1 - Desliga rele 2
+         0 1 0 - Liga rele 2
+         1 1 0 - Liga rele 2 temporizado
+               0 0 0 - Nao altera rele 1
+               0 0 1 - Desliga rele 1
+               0 1 0 - Liga rele 1
+               1 1 0 - Liga rele 1 temporizado
+
+B1 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 X X
+                 0 - Nao altera led 3
+                 1 - Liga led 3
+                   0 - Nao altera led 3
+                   1 - Desliga led 3
+
+B2 - 7 6 5 4 3 2 1 0
+     X X X X X X X X
+     0 - Nao altera saida 3 (Pino E1)
+     1 - Liga saida 3 (Pino E1)
+       0 - Nao altera saida 3 (Pino E1)
+       1 - Desliga saida 3 (Pino E1)
+         0 - Nao altera saida 2 (Pino E0)
+         1 - Liga saida 2 (Pino E0)
+           0 - Nao altera saida 2 (Pino E0)
+           1 - Desliga saida 2 (Pino E0)
+             0 - Nao altera saida 1 (Pino G5)
+             1 - Liga saida 1 (Pino G5)
+               0 - Nao altera saida 1 (Pino G5)
+               1 - Desliga saida 1 (Pino G5)
+                 0 - Nao altera saida 0 (Pino G4)
+                 1 - Liga saida 0 (Pino G4)
+                   0 - Nao altera saida 0 (Pino G4)
+                   1 - Desliga saida 0 (Pino G4)
+
+B3 - 7 6 5 4 3 2 1 0
+     0 0 0 0 X X X X
+             0 - Nao altera saida 5 (Pino H3)
+             1 - Liga saida 5 (Pino H3)
+               0 - Nao altera saida 5 (Pino H3)
+               1 - Desliga saida 5 (Pino H3)
+                 0 - Nao altera saida 4 (Pino H2)
+                 1 - Liga saida 4 (Pino H2)
+                   0 - Nao altera saida 4 (Pino H2)
+                   1 - Desliga saida 4 (Pino H2)
+
+B4 - Tempo do rele 1 (0,1 a 25,5 segundos) caso temporizado
+
+B5 - Tempo do rele 2 (0,1 a 25,5 segundos) caso temporizado
+
+Enviado pelo sec:
+55 AA 03 02(03 04) B0 B1 (B2 B3)
+Onde:
+
+Para o SecII temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     0 X X X 0 0 X X
+       0 - Led 4 desligado
+       1 - Led 4 ligado
+         0 - Led 3 desligado
+         1 - Led 3 ligado
+           0 - Led 2 desligado
+           1 - Led 2 ligado
+                 0 - Rele nao temporizado
+                 1 - Rele temporizado
+                   0 - Rele desligado
+                   1 - Rele ligado
+
+B1 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 0 0
+
+B2 - Tempo restante do rele (0,1 a 25,5 segundos) caso temporizado
+
+Para o SecDS temos:
+
+B0 - 7 6 5 4 3 2 1 0
+     0 0 X X X X X X
+         0 - Led 3 desligado
+         1 - Led 3 ligado
+           0 - Led 2 desligado
+           1 - Led 2 ligado
+             0 - Rele 2 nao temporizado
+             1 - Rele 2 temporizado
+               0 - Rele 2 desligado
+               1 - Rele 2 ligado
+                 0 - Rele 1 nao temporizado
+                 1 - Rele 1 temporizado
+                   0 - Rele 1 desligado
+                   1 - Rele 1 ligado
+
+B1 - 7 6 5 4 3 2 1 0
+     0 0 X X X X X X
+         0 - Saida 5 desligada (Pino H3)
+         1 - Saida 5 ligada (Pino H3)
+           0 - Saida 4 desligada (Pino H2)
+           1 - Saida 4 ligada (Pino H2)
+             0 - Saida 3 desligada (Pino E1)
+             1 - Saida 3 ligada (Pino E1)
+               0 - Saida 2 desligada (Pino E0)
+               1 - Saida 2 ligada (Pino E0)
+                 0 - Saida 1 desligada (Pino G5)
+                 1 - Saida 1 ligada (Pino G5)
+                   0 - Saida 0 desligada (Pino G4)
+                   1 - Saida 0 ligada (Pino G4)
+
+B2 - Tempo restante do rele 1 (0,1 a 25,5 segundos) caso temporizado
+
+B3 - Tempo restante do rele 2 (0,1 a 25,5 segundos) caso temporizado
+
+=> Funcoes para o display, validas apenas para SecDS, SecDSD e SecDSDT
+Comando recebido pelo secds:
+55 AA 04 01 B0
+Onde:
+B0 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 X X
+                 0 - Nao limpa o display LCD
+                 1 - Limpa o display LCD
+                   0 - Nao inicializa o display LCD
+                   1 - Inicializa o display LCD
+
+Enviado pelo secds:
+55 AA 04 00
+
+=> Envia mensagem para o display
+Comando recebido pelo secds:
+55 AA 05 20 (32 Bytes da mensagem)
+Onde:
+Mensagem recebida conforme se le, linha 1 posicao 0 ate linha 2 posicao 15
+
+Enviado pelo secds:
+55 AA 05 00 - Comando correto
+55 AA 05 01 - Numero de bytes invalido
+
+=> Funcao para programar o o modo de operacao do teclado do SecDSDT
+Comando recebido para o teclado
+55 AA 06 B0
+Onde:
+B0 - 7 6 5 4 3 2 1 0
+     0 0 0 0 0 0 0 X
+                   0 - Apenas uma tecla por vez
+                   1 - String de teclas ate ENTER(#) ate 15 teclas
+
+Enviado pelo secds:
+55 AA 06 00
+
+=> Funcao automatica de envio de teclas
+Enviado pelo secdsdt:
+55 AA 07 B0 (Byte(s) da(s) tecla(s))
+Onde:
+B0 - Numero de teclas
+Byte -> E - Erro de timeout de teclado (5 segundos para termino da string)
+================================================*/
