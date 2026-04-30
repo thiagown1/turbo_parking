@@ -2,23 +2,55 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Parking tickets — server-side only via Admin SDK
-    match /parking_tickets/{ticketId} {
+
+    // ══════════════════════════════════════════════════
+    // ALL collections are server-side only (Admin SDK).
+    // The Next.js API routes use firebase-admin which
+    // bypasses these rules entirely.
+    // The Python LPR scripts also use firebase-admin.
+    //
+    // These rules block ALL direct client-side access,
+    // meaning even if someone has the API key, they
+    // cannot read or write any data from the browser.
+    // ══════════════════════════════════════════════════
+
+    // Parking sessions (entry/exit records)
+    match /parking_sessions/{sessionId} {
       allow read, write: if false;
     }
 
-    // Parking config — server-side only via Admin SDK
+    // Parking config (validation rules, feature flags)
     match /parking_config/{locationId} {
       allow read, write: if false;
     }
 
-    // Parking admins — server-side only via Admin SDK
+    // Pricing config (used by Python scripts)
+    match /pricing_config/{docId} {
+      allow read, write: if false;
+    }
+
+    // Admin users
     match /parking_admins/{uid} {
       allow read, write: if false;
     }
 
-    // Parking stats — server-side only via Admin SDK
-    match /parking_stats/{locationId}/daily/{date} {
+    // Daily statistics
+    match /daily_stats/{date} {
+      allow read, write: if false;
+    }
+
+    // System status (LPR camera status)
+    match /system_status/{docId} {
+      allow read, write: if false;
+    }
+
+    // Error logs
+    match /errors/{errorId} {
+      allow read, write: if false;
+    }
+
+    // Catch-all: deny everything else
+    match /{document=**} {
       allow read, write: if false;
     }
   }
