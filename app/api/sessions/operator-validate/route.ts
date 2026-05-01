@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     const operatorUserId = "admin";
 
     const result = await operatorValidateSession(targetId, locationId, operatorUserId, notes);
+    console.log("[operator-validate] targetId:", targetId, "result:", result.success, result.error || "");
     return NextResponse.json(result, { status: result.success ? 200 : 400 });
   } catch (error) {
     console.error("[sessions/operator-validate] Error:", error);

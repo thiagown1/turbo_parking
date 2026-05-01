@@ -38,10 +38,13 @@ export async function POST(req: NextRequest) {
     });
 
     return response;
-  } catch (error) {
-    console.error("[auth/session] Error:", error);
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    console.error("[auth/session] Error code:", err.code);
+    console.error("[auth/session] Error message:", err.message);
+    console.error("[auth/session] Full error:", error);
     return NextResponse.json(
-      { error: "Invalid ID token" },
+      { error: err.message || "Invalid ID token", code: err.code },
       { status: 401 }
     );
   }

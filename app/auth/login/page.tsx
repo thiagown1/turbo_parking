@@ -46,7 +46,7 @@ function LoginForm() {
         setError(data.error || "Erro ao criar sessão");
       }
     } catch (err: unknown) {
-      const firebaseError = err as { code?: string };
+      const firebaseError = err as { code?: string; message?: string };
       switch (firebaseError.code) {
         case "auth/invalid-credential":
         case "auth/wrong-password":
@@ -60,7 +60,7 @@ function LoginForm() {
           setError("Configuração do Firebase inválida. Contate o administrador.");
           break;
         default:
-          setError("Erro ao fazer login. Verifique suas credenciais.");
+          setError(`Erro: ${firebaseError.code || firebaseError.message || "desconhecido"}`);
       }
     } finally {
       setLoading(false);

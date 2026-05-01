@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Car, CheckCircle2, AlertCircle, Search, QrCode, ListTodo, Clock } from "lucide-react";
 import { Scanner } from "@yudiel/react-qr-scanner";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, formatRelativeTime } from "@/lib/utils";
 import type { ParkingSession } from "@/interfaces/parking-session";
 
 type ScanState = "idle" | "scanning" | "found" | "validated" | "error";
@@ -169,12 +169,19 @@ export default function SearchValidationPage() {
       {/* Main Area */}
       <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-sm">
         {activeTab === "no_patio" ? (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-               <h2 className="text-xl font-semibold tracking-tight">Veículos no Pátio</h2>
+               <div className="flex items-center gap-2">
+                 <h2 className="text-xl font-semibold tracking-tight">Veículos no Pátio</h2>
+                 {activeSessions.length > 0 && (
+                   <span className="rounded-full bg-[hsl(var(--primary))] px-2 py-0.5 text-xs font-bold text-white">
+                     {activeSessions.length}
+                   </span>
+                 )}
+               </div>
                <span className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
                  <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--status-success))] animate-pulse-dot" />
-                 Atualizando ao vivo
+                 Ao vivo
                </span>
             </div>
             
@@ -183,16 +190,21 @@ export default function SearchValidationPage() {
             ) : activeSessions.length === 0 ? (
               <p className="text-center text-[hsl(var(--muted-foreground))] py-8">Nenhum veículo ativo no momento.</p>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {activeSessions.map((session) => (
                   <div key={session.id} className="flex flex-col justify-between rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--secondary)/0.5)] p-4 shadow-sm transition-all hover:border-[hsl(var(--primary)/0.5)]">
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="font-mono text-xl font-bold tracking-widest">{session.plate || session.ticket_id}</p>
-                        <p className="flex items-center gap-1 text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                          <Clock className="h-3 w-3" />
-                          {formatDate(session.entry_time)}
-                        </p>
+                        <div className="mt-1 space-y-0.5">
+                          <p className="flex items-center gap-1 text-xs text-[hsl(var(--muted-foreground))]">
+                            <Clock className="h-3 w-3" />
+                            Entrada: {formatDate(session.entry_time)}
+                          </p>
+                          <p className="text-xs font-medium text-[hsl(var(--primary))]">
+                            ⏱ {formatRelativeTime(session.entry_time)}
+                          </p>
+                        </div>
                       </div>
                       <span className={cn("badge", 
                         session.payment_status === "paid" ? "badge-success" : 
@@ -202,7 +214,7 @@ export default function SearchValidationPage() {
                       </span>
                     </div>
                     
-                    <div className="mt-4">
+                    <div className="mt-3">
                       {session.payment_status === "pending" ? (
                         <button
                           onClick={() => handleValidateActive(session)}
