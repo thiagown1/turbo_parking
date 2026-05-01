@@ -17,18 +17,20 @@ export async function GET(req: NextRequest) {
     }
 
     // Firestore prefix range query: >= "RED" and < "REE" (next char after D)
+    // We filter status client-side to avoid requiring a composite index.
     const endPrefix = q.slice(0, -1) + String.fromCharCode(q.charCodeAt(q.length - 1) + 1);
 
     const snap = await adminFirestore
       .collection("parking_sessions")
       .where("plate_normalized", ">=", q)
       .where("plate_normalized", "<", endPrefix)
-      .where("status", "==", "active")
       .orderBy("plate_normalized")
-      .limit(20)
+      .limit(50)
       .get();
 
-    const sessions: ParkingSession[] = snap.docs.map((doc) => {
+    const activeDocs = snap.docs.filter((doc) => doc.data().status === "active");
+
+    const sessions: ParkingSession[] = activeDocs.map((doc) => {
       const data = doc.data();
       return {
         id: doc.id,
