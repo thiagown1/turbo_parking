@@ -25,10 +25,14 @@ export default function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | "all">("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  const fetchSessions = async () => {
+  const fetchSessions = async (searchQuery?: string) => {
     try {
-      // Fetch latest 50 active and recently completed sessions
-      const res = await fetch("/api/sessions?limit=50");
+      let url = "/api/sessions?limit=50";
+      // If searching, use the prefix search endpoint instead
+      if (searchQuery && searchQuery.trim().length >= 2) {
+        url = `/api/sessions/search?q=${encodeURIComponent(searchQuery.trim())}`;
+      }
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setSessions(data.sessions || []);
@@ -42,10 +46,19 @@ export default function TicketsPage() {
 
   useEffect(() => {
     fetchSessions();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchSessions, 30000);
+    const interval = setInterval(() => fetchSessions(), 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Debounced server-side search when user types
+  useEffect(() => {
+    if (search.length >= 2) {
+      const timeout = setTimeout(() => fetchSessions(search), 300);
+      return () => clearTimeout(timeout);
+    } else if (search.length === 0) {
+      fetchSessions();
+    }
+  }, [search]);
 
   const handleValidate = async (plate: string) => {
     try {
