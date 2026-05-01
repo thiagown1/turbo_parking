@@ -44,13 +44,12 @@ export default function TicketsPage() {
     }
   };
 
+  // Initial load
   useEffect(() => {
     fetchSessions();
-    const interval = setInterval(() => fetchSessions(), 30000);
-    return () => clearInterval(interval);
   }, []);
 
-  // Debounced server-side search when user types
+  // Debounced server-side search when user types + polling that respects search
   useEffect(() => {
     if (search.length >= 2) {
       const timeout = setTimeout(() => fetchSessions(search), 300);
@@ -58,6 +57,9 @@ export default function TicketsPage() {
     } else if (search.length === 0) {
       fetchSessions();
     }
+    // Polling: always pass current search so results stay consistent
+    const interval = setInterval(() => fetchSessions(search.length >= 2 ? search : undefined), 30000);
+    return () => clearInterval(interval);
   }, [search]);
 
   const handleValidate = async (plate: string) => {
