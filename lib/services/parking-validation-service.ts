@@ -335,3 +335,55 @@ function toISOString(val: unknown): string {
   }
   return new Date().toISOString();
 }
+
+// ─── Dashboard Stats ───
+
+export interface DashboardStats {
+  activeInLot: number;
+  validatedEV: number;
+  pendingPayment: number;
+  totalDetectionsToday: number;
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const sessionsRef = adminFirestore.collection(SESSIONS_COLLECTION);
+
+  // Active sessions (vehicles currently in the lot)
+  const activeSnap = await sessionsRef
+    .where("status", "==", "active")
+    .get();
+
+  let validatedEV = 0;
+  let pendingPayment = 0;
+
+  activeSnap.docs.forEach((doc) => {
+    const data = doc.data();
+    if (data.payment_status === "paid") validatedEV++;
+    if (data.payment_status === "pending") pendingPayment++;
+  });
+
+  // Today's detections (entries created today)
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const todaySnap = await sessionsRef
+    .where("entry_time", ">=", todayStart)
+    .get();
+
+  return {
+    activeInLot: activeSnap.size,
+    validatedEV,
+    pendingPayment,
+    totalDetectionsToday: todaySnap.size,
+  };
+}
+
+export async function getRecentSessions(limit = 5): Promise<ParkingSession[]> {
+  const snap = await adminFirestore
+    .collection(SESSIONS_COLLECTION)
+    .orderBy("entry_time", "desc")
+    .limit(limit)
+    .get();
+
+  return snap.docs.map((doc) => serializeSession(doc.id, doc.data()));
+}

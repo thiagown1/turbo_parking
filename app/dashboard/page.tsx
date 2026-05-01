@@ -1,127 +1,77 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Car,
   CheckCircle2,
   Clock,
-  TrendingUp,
   Camera,
   Activity,
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import type { ParkingSession } from "@/interfaces/parking-session";
 
-// ─── Mock data (replaced by Firebase later) ───
-
-const statsData = [
-  {
-    label: "Veículos no Pátio",
-    value: "42",
-    icon: Car,
-    change: "+12%",
-    changeUp: true,
-  },
-  {
-    label: "Validados (EV)",
-    value: "18",
-    icon: CheckCircle2,
-    change: "+8%",
-    changeUp: true,
-  },
-  {
-    label: "Pendentes",
-    value: "24",
-    icon: Clock,
-    change: "-2",
-    changeUp: false,
-  },
-  {
-    label: "Visitas LPR",
-    value: "156",
-    icon: Camera,
-    change: "+15%",
-    changeUp: true,
-  },
-];
-
-const chartData = [
-  { day: "Seg", count: 120 },
-  { day: "Ter", count: 145 },
-  { day: "Qua", count: 130 },
-  { day: "Qui", count: 156 },
-  { day: "Sex", count: 198 },
-  { day: "Sáb", count: 210 },
-  { day: "Dom", count: 180 },
-];
-
-const recentSessions: ParkingSession[] = [
-  {
-    id: "1",
-    plate: "SGT7D71",
-    plate_normalized: "SGT7D71",
-    vehicle_type: "visitante",
-    is_authorized: false,
-    gate_opened_by: "auto_lpr",
-    recognition_confidence: 98.5,
-    entry_time: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    status: "active",
-    payment_status: "paid",
-    ev_recharge_validated: true,
-    ev_total_recharge_minutes: 25,
-    ev_total_parking_minutes_granted: 25,
-    created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "2",
-    plate: "ABC1234",
-    plate_normalized: "ABC1234",
-    vehicle_type: "morador",
-    is_authorized: true,
-    gate_opened_by: "auto_lpr",
-    recognition_confidence: 99.1,
-    entry_time: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-    status: "active",
-    payment_status: "free",
-    created_at: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "3",
-    plate: "XYZ9876",
-    plate_normalized: "XYZ9876",
-    vehicle_type: "visitante",
-    is_authorized: false,
-    gate_opened_by: "auto_lpr",
-    recognition_confidence: 96.2,
-    entry_time: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
-    status: "completed",
-    payment_status: "pending",
-    duration_minutes: 180,
-    amount_charged: 15.0,
-    created_at: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "4",
-    plate: "DEF5678",
-    plate_normalized: "DEF5678",
-    vehicle_type: "visitante",
-    is_authorized: false,
-    gate_opened_by: "auto_lpr",
-    recognition_confidence: 95.0,
-    entry_time: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    status: "active",
-    payment_status: "pending",
-    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-];
-
-const maxChartValue = Math.max(...chartData.map((d) => d.count));
+interface DashboardStats {
+  activeInLot: number;
+  validatedEV: number;
+  pendingPayment: number;
+  totalDetectionsToday: number;
+}
 
 export default function DashboardOverview() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentSessions, setRecentSessions] = useState<ParkingSession[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    try {
+      const res = await fetch("/api/dashboard/stats");
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data.stats);
+        setRecentSessions(data.recentSessions || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard stats", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 15000); // Refresh every 15s
+    return () => clearInterval(interval);
+  }, []);
+
+  const statsCards = [
+    {
+      label: "Veículos no Pátio",
+      value: stats?.activeInLot ?? "—",
+      icon: Car,
+    },
+    {
+      label: "Validados (EV)",
+      value: stats?.validatedEV ?? "—",
+      icon: CheckCircle2,
+    },
+    {
+      label: "Pendentes",
+      value: stats?.pendingPayment ?? "—",
+      icon: Clock,
+    },
+    {
+      label: "Detecções Hoje",
+      value: stats?.totalDetectionsToday ?? "—",
+      icon: Camera,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 stagger">
-        {statsData.map((stat) => (
+        {statsCards.map((stat) => (
           <div
             key={stat.label}
             className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5"
@@ -133,25 +83,18 @@ export default function DashboardOverview() {
               <stat.icon className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight">
+              <span className={cn(
+                "text-2xl font-bold tracking-tight",
+                loading && "animate-pulse text-[hsl(var(--muted-foreground))]"
+              )}>
                 {stat.value}
-              </span>
-              <span
-                className={cn(
-                  "text-xs font-medium",
-                  stat.changeUp
-                    ? "text-[hsl(var(--status-success))]"
-                    : "text-[hsl(var(--muted-foreground))]"
-                )}
-              >
-                {stat.change}
               </span>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Camera + Chart Row */}
+      {/* Camera + Status Row */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Camera Feed */}
         <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5">
@@ -173,30 +116,37 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Chart */}
+        {/* System Status */}
         <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Activity className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-            <h2 className="text-sm font-semibold">Leituras (7 dias)</h2>
+            <h2 className="text-sm font-semibold">Resumo do Sistema</h2>
           </div>
-          <div className="flex h-48 items-end gap-2">
-            {chartData.map((d) => (
-              <div key={d.day} className="flex flex-1 flex-col items-center gap-1">
-                <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                  {d.count}
-                </span>
-                <div
-                  className="w-full rounded-md bg-[hsl(var(--primary))] transition-all duration-500"
-                  style={{
-                    height: `${(d.count / maxChartValue) * 140}px`,
-                    opacity: 0.8 + (d.count / maxChartValue) * 0.2,
-                  }}
-                />
-                <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                  {d.day}
-                </span>
-              </div>
-            ))}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg bg-[hsl(var(--secondary)/0.5)] p-3">
+              <span className="text-sm text-[hsl(var(--muted-foreground))]">API Status</span>
+              <span className="flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--status-success))]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--status-success))]" />
+                Online
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-[hsl(var(--secondary)/0.5)] p-3">
+              <span className="text-sm text-[hsl(var(--muted-foreground))]">Firestore Rules</span>
+              <span className="flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--status-success))]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--status-success))]" />
+                Locked
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-[hsl(var(--secondary)/0.5)] p-3">
+              <span className="text-sm text-[hsl(var(--muted-foreground))]">Sessões Ativas</span>
+              <span className="text-sm font-semibold">{stats?.activeInLot ?? "—"}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-[hsl(var(--secondary)/0.5)] p-3">
+              <span className="text-sm text-[hsl(var(--muted-foreground))]">Última Atualização</span>
+              <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                {loading ? "Carregando..." : formatDate(new Date().toISOString())}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -234,35 +184,49 @@ export default function DashboardOverview() {
               </tr>
             </thead>
             <tbody>
-              {recentSessions.map((session) => (
-                <tr
-                  key={session.id}
-                  className="border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--secondary)/0.5)] transition-colors"
-                >
-                  <td className="px-5 py-3.5">
-                    <code className="font-mono text-sm font-semibold">
-                      {session.plate}
-                    </code>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className={cn("badge", 
-                      session.payment_status === "paid" ? "badge-success" : 
-                      session.payment_status === "free" ? "badge-info" : "badge-warning"
-                    )}>
-                      {session.payment_status === "paid" ? "Pago" : session.payment_status === "free" ? "Isento" : "Pendente"}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
-                    {formatDate(session.entry_time)}
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="capitalize text-[hsl(var(--muted-foreground))]">{session.vehicle_type}</span>
-                  </td>
-                  <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
-                    {session.recognition_confidence.toFixed(1)}%
+              {loading && recentSessions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-[hsl(var(--muted-foreground))]">
+                    Carregando atividade recente...
                   </td>
                 </tr>
-              ))}
+              ) : recentSessions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-[hsl(var(--muted-foreground))]">
+                    Nenhuma sessão registrada.
+                  </td>
+                </tr>
+              ) : (
+                recentSessions.map((session) => (
+                  <tr
+                    key={session.id}
+                    className="border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--secondary)/0.5)] transition-colors"
+                  >
+                    <td className="px-5 py-3.5">
+                      <code className="font-mono text-sm font-semibold">
+                        {session.plate}
+                      </code>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className={cn("badge", 
+                        session.payment_status === "paid" ? "badge-success" : 
+                        session.payment_status === "free" ? "badge-info" : "badge-warning"
+                      )}>
+                        {session.payment_status === "paid" ? "Pago" : session.payment_status === "free" ? "Isento" : "Pendente"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
+                      {formatDate(session.entry_time)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="capitalize text-[hsl(var(--muted-foreground))]">{session.vehicle_type}</span>
+                    </td>
+                    <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
+                      {(session.recognition_confidence || 0).toFixed(1)}%
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
