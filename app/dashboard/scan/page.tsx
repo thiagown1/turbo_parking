@@ -69,16 +69,27 @@ export default function SearchValidationPage() {
     }
   };
 
+  const [searchResults, setSearchResults] = useState<ParkingSession[]>([]);
+
   const handleSearch = async (identifier: string) => {
     if (!identifier.trim()) return;
     setScanState("scanning");
+    setSearchResults([]);
 
     try {
-      const res = await fetch(`/api/sessions/${encodeURIComponent(identifier)}`);
+      const res = await fetch(`/api/sessions/search?q=${encodeURIComponent(identifier)}`);
       if (res.ok) {
         const data = await res.json();
-        setFoundSession(data.session);
-        setScanState("found");
+        const sessions = data.sessions || [];
+        if (sessions.length === 1) {
+          setFoundSession(sessions[0]);
+          setScanState("found");
+        } else if (sessions.length > 1) {
+          setSearchResults(sessions);
+          setScanState("found");
+        } else {
+          setScanState("error");
+        }
       } else {
         setScanState("error");
       }
@@ -122,6 +133,7 @@ export default function SearchValidationPage() {
     setScanState("idle");
     setFoundSession(null);
     setIdentifierInput("");
+    setSearchResults([]);
   };
 
   return (
@@ -289,7 +301,7 @@ export default function SearchValidationPage() {
                       value={identifierInput}
                       onChange={(e) => setIdentifierInput(e.target.value.toUpperCase())}
                       onKeyDown={(e) => e.key === "Enter" && handleSearch(identifierInput)}
-                      placeholder="Ex: ABC1234 ou ABC1D23"
+                      placeholder="Ex: RED, ABC1234, ABC1D23"
                       className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] py-3 pl-10 pr-4 text-base font-mono uppercase tracking-widest placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
                     />
                   </div>
@@ -304,6 +316,55 @@ export default function SearchValidationPage() {
               </div>
             )}
           </>
+        ) : scanState === "found" && searchResults.length > 1 ? (
+          <div className="space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">{searchResults.length} veículos encontrados</p>
+              <button onClick={handleReset} className="text-xs text-[hsl(var(--primary))] hover:underline">Nova busca</button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {searchResults.map((session) => (
+                <div key={session.id} className="flex flex-col justify-between rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--secondary)/0.5)] p-4 shadow-sm transition-all hover:border-[hsl(var(--primary)/0.5)]">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-mono text-xl font-bold tracking-widest">{session.plate || session.ticket_id}</p>
+                      <div className="mt-1 space-y-0.5">
+                        <p className="flex items-center gap-1 text-xs text-[hsl(var(--muted-foreground))]">
+                          <Clock className="h-3 w-3" />
+                          Entrada: {formatDate(session.entry_time)}
+                        </p>
+                        <p className="text-xs font-medium text-[hsl(var(--primary))]">
+                          ⏱ {formatRelativeTime(session.entry_time)}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={cn("badge",
+                      session.payment_status === "paid" ? "badge-success" :
+                      session.payment_status === "free" ? "badge-info" : "badge-warning"
+                    )}>
+                      {session.payment_status === "paid" ? "Pago" : session.payment_status === "free" ? "Isento" : "Pendente"}
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    {session.payment_status === "pending" ? (
+                      <button
+                        onClick={() => handleValidateActive(session)}
+                        className="w-full flex items-center justify-center gap-2 rounded-lg bg-[hsl(var(--primary))] py-2 text-sm font-medium text-white shadow-sm transition-opacity hover:opacity-90"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Validar Saída
+                      </button>
+                    ) : (
+                      <div className="w-full flex items-center justify-center gap-2 rounded-lg bg-[hsl(var(--status-success)/0.1)] text-[hsl(var(--status-success))] py-2 text-sm font-medium">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Liberado
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : scanState === "found" && foundSession ? (
           <div className="space-y-5 animate-fade-in">
             <div className="flex items-center justify-between rounded-lg bg-[hsl(var(--secondary)/0.5)] p-4">
