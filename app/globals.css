@@ -104,4 +104,110 @@
   .animate-pulse-dot {
     animation: pulse-dot 2s ease-in-out infinite;
   }
+
+  /* ─── Brazilian Mercosul License Plate ─── */
+  .license-plate {
+    width: 110px;
+    background: hsl(0 0% 96%);
+    border-radius: 4px;
+    border: 2px solid hsl(0 0% 55%);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.25);
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .group:hover .license-plate {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px hsl(0 0% 0% / 0.35);
+  }
+
+  .license-plate__header {
+    background: linear-gradient(180deg, hsl(217 80% 48%) 0%, hsl(217 75% 40%) 100%);
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 5px;
+    position: relative;
+  }
+
+  .license-plate__flag {
+    display: flex;
+    gap: 0px;
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .license-plate__flag-green {
+    width: 3px;
+    height: 6px;
+    background: hsl(120 60% 40%);
+    border-radius: 1px 0 0 1px;
+  }
+
+  .license-plate__flag-yellow {
+    width: 3px;
+    height: 6px;
+    background: hsl(50 95% 55%);
+  }
+
+  .license-plate__flag-blue {
+    width: 3px;
+    height: 6px;
+    background: hsl(217 80% 45%);
+    border-radius: 0 1px 1px 0;
+  }
+
+  .license-plate__country {
+    font-size: 6px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: hsl(0 0% 100%);
+    text-transform: uppercase;
+    font-family: var(--font-inter), sans-serif;
+  }
+
+  .license-plate__mercosul {
+    position: absolute;
+    left: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .license-plate__mercosul-stars {
+    font-size: 5px;
+    color: hsl(50 95% 65%);
+  }
+
+  .license-plate__number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono), 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    color: hsl(0 0% 10%);
+    text-transform: uppercase;
+    line-height: 1;
+    padding: 5px 4px;
+    background: hsl(0 0% 96%);
+  }
+
+  .license-plate--skeleton {
+    opacity: 0.4;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  .license-plate--skeleton .license-plate__number {
+    font-size: 14px;
+    letter-spacing: 4px;
+    color: hsl(0 0% 40%);
+  }
 }

@@ -1,20 +1,32 @@
 import { adminFirestore } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import type { ParkingSession, SessionStatus, RechargeEntry, PaymentStatus } from "@/interfaces/parking-session";
+import { isGateOpenStatus } from "@/interfaces/parking-session";
 import type { ParkingConfig } from "@/interfaces/parking-config";
 
 /**
  * Core parking validation logic for the Python LPR system.
+ *
+ * Firestore structure: parking_sessions/{documentId}
+ * Documents are stored flat in the parking_sessions collection.
  */
+const PARKING_SESSIONS = "parking_sessions";
+const CONFIG_COLLECTION = "parking_config";
 
-const SESSIONS_COLLECTION = "parking_sessions";
-const CONFIG_COLLECTION = "pricing_config"; // Python uses pricing_config for prices, but we might have our own config or merge it.
+function sessionsCollection() {
+  return adminFirestore.collection(PARKING_SESSIONS);
+}
+
+function getTodayDateString(): string {
+  const now = new Date();
+  return now.toISOString().slice(0, 10); // "2026-05-04"
+}
 
 // ─── Config ───
 
 export async function getConfig(locationId: string): Promise<ParkingConfig | null> {
   // Using our own parking_config for turbo_parking specific settings (like enabled, ratio)
-  // Python uses `pricing_config/current` for pricing. We'll use our own collection for our configs.
+  // Python uses `parking_config/current` for pricing. We'll use our own collection for our configs.
   const doc = await adminFirestore.collection("parking_config").doc(locationId).get();
   if (!doc.exists) return null;
   return { id: doc.id, ...doc.data() } as ParkingConfig;
@@ -29,7 +41,7 @@ export async function updateConfig(locationId: string, updates: Partial<ParkingC
 
   // Sync test mode to the Python script's configuration
   if (data.testModeAlwaysOpenGate !== undefined) {
-    await adminFirestore.collection("pricing_config").doc("current").set(
+    await adminFirestore.collection("parking_config").doc("current").set(
       { always_open_gate: data.testModeAlwaysOpenGate, updated_at: FieldValue.serverTimestamp() },
       { merge: true }
     );
@@ -40,8 +52,7 @@ export async function updateConfig(locationId: string, updates: Partial<ParkingC
 
 export async function getSessionByIdentifier(identifier: string): Promise<ParkingSession | null> {
   // Try plate first
-  let snap = await adminFirestore
-    .collection(SESSIONS_COLLECTION)
+  let snap = await sessionsCollection()
     .where("plate_normalized", "==", identifier)
     .where("status", "==", "active")
     .limit(1)
@@ -49,8 +60,7 @@ export async function getSessionByIdentifier(identifier: string): Promise<Parkin
 
   if (snap.empty) {
     // Try ticket_id
-    snap = await adminFirestore
-      .collection(SESSIONS_COLLECTION)
+    snap = await sessionsCollection()
       .where("ticket_id", "==", identifier)
       .where("status", "==", "active")
       .limit(1)
@@ -66,7 +76,7 @@ export async function listSessions(opts: {
   status?: SessionStatus;
   limit?: number;
 }): Promise<ParkingSession[]> {
-  let query = adminFirestore.collection(SESSIONS_COLLECTION).orderBy("created_at", "desc");
+  let query: FirebaseFirestore.Query = sessionsCollection().orderBy("created_at", "desc");
 
   if (opts.status) query = query.where("status", "==", opts.status);
 
@@ -92,8 +102,7 @@ export async function accumulateRecharge(
 
   const parkingMinutesGranted = entry.rechargeDurationMinutes * config.rechargeToMinutesRatio;
 
-  const sessionSnap = await adminFirestore
-    .collection(SESSIONS_COLLECTION)
+  const sessionSnap = await sessionsCollection()
     .where("plate_normalized", "==", plate_normalized)
     .where("status", "==", "active")
     .limit(1)
@@ -106,7 +115,7 @@ export async function accumulateRecharge(
   const doc = sessionSnap.docs[0];
   const existing = doc.data() as ParkingSession;
 
-  if (existing.payment_status === "paid") {
+  if (isGateOpenStatus(existing.payment_status)) {
     return { success: false, error: "ALREADY_VALIDATED" };
   }
 
@@ -174,7 +183,7 @@ export async function validateSession(
   const session = await getSessionByIdentifier(identifier);
   if (!session) return { success: false, error: "SESSION_NOT_FOUND" };
 
-  if (session.payment_status === "paid" || session.payment_status === "free") {
+  if (isGateOpenStatus(session.payment_status)) {
     return { success: true, session }; // Idempotent
   }
 
@@ -234,7 +243,7 @@ export async function validateSession(
   }
 
   // ✅ Validate — atomic update
-  const docRef = adminFirestore.collection(SESSIONS_COLLECTION).doc(session.id);
+  const docRef = sessionsCollection().doc(session.id);
   const ev_validated_at = new Date().toISOString();
 
   await adminFirestore.runTransaction(async (tx) => {
@@ -267,11 +276,11 @@ export async function operatorValidateSession(
   const session = await getSessionByIdentifier(identifier);
   if (!session) return { success: false, error: "SESSION_NOT_FOUND" };
 
-  if (session.payment_status === "paid" || session.payment_status === "free") {
+  if (isGateOpenStatus(session.payment_status)) {
     return { success: true, session }; // Idempotent
   }
 
-  const docRef = adminFirestore.collection(SESSIONS_COLLECTION).doc(session.id);
+  const docRef = sessionsCollection().doc(session.id);
   const ev_validated_at = new Date().toISOString();
 
   await docRef.update({
@@ -346,10 +355,8 @@ export interface DashboardStats {
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const sessionsRef = adminFirestore.collection(SESSIONS_COLLECTION);
-
   // Active sessions (vehicles currently in the lot)
-  const activeSnap = await sessionsRef
+  const activeSnap = await sessionsCollection()
     .where("status", "==", "active")
     .get();
 
@@ -358,16 +365,19 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   activeSnap.docs.forEach((doc) => {
     const data = doc.data();
-    if (data.payment_status === "paid") validatedEV++;
-    if (data.payment_status === "pending") pendingPayment++;
+    if (isGateOpenStatus(data.payment_status)) validatedEV++;
+    if (data.payment_status === "pending" || data.payment_status === "pending_excess") pendingPayment++;
   });
 
-  // Today's detections (entries created today)
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  // Today's detections — filter by entry_time starting with today's date
+  const todayStr = getTodayDateString();
+  const todayStart = new Date(todayStr + "T00:00:00.000Z");
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
 
-  const todaySnap = await sessionsRef
+  const todaySnap = await sessionsCollection()
     .where("entry_time", ">=", todayStart)
+    .where("entry_time", "<", tomorrowStart)
     .get();
 
   return {
@@ -379,8 +389,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 }
 
 export async function getRecentSessions(limit = 5): Promise<ParkingSession[]> {
-  const snap = await adminFirestore
-    .collection(SESSIONS_COLLECTION)
+  const snap = await sessionsCollection()
     .orderBy("entry_time", "desc")
     .limit(limit)
     .get();

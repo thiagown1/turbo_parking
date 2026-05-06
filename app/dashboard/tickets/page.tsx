@@ -10,12 +10,17 @@ import {
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import type { ParkingSession, PaymentStatus } from "@/interfaces/parking-session";
+import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_BADGE } from "@/interfaces/parking-session";
 
 const statusFilters: { label: string; value: PaymentStatus | "all" }[] = [
   { label: "Todos", value: "all" },
-  { label: "Livre/Isento", value: "free" },
   { label: "Pendente", value: "pending" },
-  { label: "Pago (EV)", value: "paid" },
+  { label: "Excedido", value: "pending_excess" },
+  { label: "Pago", value: "paid" },
+  { label: "Morador", value: "exempt_resident" },
+  { label: "Tolerância", value: "exempt_tolerance" },
+  { label: "Validado Loja", value: "exempt_store" },
+  { label: "Modo Teste", value: "exempt_test" },
 ];
 
 export default function TicketsPage() {
@@ -193,10 +198,9 @@ export default function TicketsPage() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span className={cn("badge", 
-                        session.payment_status === "paid" ? "badge-success" : 
-                        session.payment_status === "free" ? "badge-info" : "badge-warning"
+                        PAYMENT_STATUS_BADGE[session.payment_status] || "badge-warning"
                       )}>
-                        {session.payment_status === "paid" ? "Pago" : session.payment_status === "free" ? "Isento" : "Pendente"}
+                        {PAYMENT_STATUS_LABELS[session.payment_status] || session.payment_status}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
@@ -219,7 +223,7 @@ export default function TicketsPage() {
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        {session.payment_status === "pending" && session.status === "active" && (
+                        {(session.payment_status === "pending" || session.payment_status === "pending_excess") && session.status === "active" && (
                           <button
                             onClick={() => handleValidate(session.plate_normalized || session.ticket_id || "")}
                             className="inline-flex items-center gap-1 rounded-md bg-[hsl(var(--primary))] px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 transition-opacity"

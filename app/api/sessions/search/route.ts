@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const endPrefix = q.slice(0, -1) + String.fromCharCode(q.charCodeAt(q.length - 1) + 1);
 
     const snap = await adminFirestore
-      .collection("parking_sessions")
+      .collectionGroup("sessions")
       .where("plate_normalized", ">=", q)
       .where("plate_normalized", "<", endPrefix)
       .orderBy("plate_normalized")

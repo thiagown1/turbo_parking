@@ -5,6 +5,7 @@ import { Car, CheckCircle2, AlertCircle, Search, QrCode, ListTodo, Clock } from 
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { cn, formatDate, formatRelativeTime } from "@/lib/utils";
 import type { ParkingSession } from "@/interfaces/parking-session";
+import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_BADGE, isGateOpenStatus } from "@/interfaces/parking-session";
 
 type ScanState = "idle" | "scanning" | "found" | "validated" | "error";
 type TabType = "qr" | "manual" | "no_patio";
@@ -219,15 +220,14 @@ export default function SearchValidationPage() {
                         </div>
                       </div>
                       <span className={cn("badge", 
-                        session.payment_status === "paid" ? "badge-success" : 
-                        session.payment_status === "free" ? "badge-info" : "badge-warning"
+                        PAYMENT_STATUS_BADGE[session.payment_status] || "badge-warning"
                       )}>
-                        {session.payment_status === "paid" ? "Pago" : session.payment_status === "free" ? "Isento" : "Pendente"}
+                        {PAYMENT_STATUS_LABELS[session.payment_status] || session.payment_status}
                       </span>
                     </div>
                     
                     <div className="mt-3">
-                      {session.payment_status === "pending" ? (
+                      {!isGateOpenStatus(session.payment_status) ? (
                         <button
                           onClick={() => handleValidateActive(session)}
                           className="w-full flex items-center justify-center gap-2 rounded-lg bg-[hsl(var(--primary))] py-2 text-sm font-medium text-white shadow-sm transition-opacity hover:opacity-90"
@@ -339,14 +339,13 @@ export default function SearchValidationPage() {
                       </div>
                     </div>
                     <span className={cn("badge",
-                      session.payment_status === "paid" ? "badge-success" :
-                      session.payment_status === "free" ? "badge-info" : "badge-warning"
+                      PAYMENT_STATUS_BADGE[session.payment_status] || "badge-warning"
                     )}>
-                      {session.payment_status === "paid" ? "Pago" : session.payment_status === "free" ? "Isento" : "Pendente"}
+                      {PAYMENT_STATUS_LABELS[session.payment_status] || session.payment_status}
                     </span>
                   </div>
                   <div className="mt-3">
-                    {session.payment_status === "pending" ? (
+                    {!isGateOpenStatus(session.payment_status) ? (
                       <button
                         onClick={() => handleValidateActive(session)}
                         className="w-full flex items-center justify-center gap-2 rounded-lg bg-[hsl(var(--primary))] py-2 text-sm font-medium text-white shadow-sm transition-opacity hover:opacity-90"
@@ -379,18 +378,10 @@ export default function SearchValidationPage() {
               <span
                 className={cn(
                   "badge",
-                  foundSession.payment_status === "paid"
-                    ? "badge-success"
-                    : foundSession.payment_status === "free"
-                    ? "badge-info"
-                    : "badge-warning"
+                  PAYMENT_STATUS_BADGE[foundSession.payment_status] || "badge-warning"
                 )}
               >
-                {foundSession.payment_status === "paid"
-                  ? "Pago"
-                  : foundSession.payment_status === "free"
-                  ? "Isento"
-                  : "Pendente"}
+                {PAYMENT_STATUS_LABELS[foundSession.payment_status] || foundSession.payment_status}
               </span>
             </div>
 
@@ -417,7 +408,7 @@ export default function SearchValidationPage() {
               </div>
             </div>
 
-            {foundSession.payment_status === "pending" && foundSession.status === "active" && (
+            {!isGateOpenStatus(foundSession.payment_status) && foundSession.status === "active" && (
               <div className="flex gap-2 border-t border-[hsl(var(--border))] pt-4">
                 <button
                   onClick={handleValidate}
@@ -435,7 +426,7 @@ export default function SearchValidationPage() {
               </div>
             )}
 
-            {(foundSession.payment_status === "paid" || foundSession.payment_status === "free") && (
+            {isGateOpenStatus(foundSession.payment_status) && (
               <div className="border-t border-[hsl(var(--border))] pt-4">
                 <button
                   onClick={handleReset}
